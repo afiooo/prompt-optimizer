@@ -58,11 +58,17 @@
   </div>
 </template>
   
-<script setup>
-import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
+<script setup lang="ts">
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, inject } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { usePreferences } from '../composables/usePreferenceManager';
+import { UI_SETTINGS_KEYS } from '@prompt-optimizer/core';
+import type { Ref } from 'vue';
+import type { AppServices } from '../types/services';
 
 const { t } = useI18n();
+const services = inject<Ref<AppServices | null>>('services')!;
+const { getPreference, setPreference } = usePreferences(services);
 
 // Available themes list
 const availableThemes = computed(() => [
@@ -107,14 +113,14 @@ const toggleThemeMenu = () => {
 };
 
 // Select theme
-const selectTheme = (themeId) => {
+const selectTheme = async (themeId: string) => {
   currentTheme.value = themeId;
   showThemeMenu.value = false;
-  updateTheme();
+  await updateTheme();
 };
 
 // Update theme
-const updateTheme = () => {
+const updateTheme = async () => {
   // Get current theme
   const theme = availableThemes.value.find(t => t.id === currentTheme.value);
   if (!theme) return;
@@ -136,8 +142,11 @@ const updateTheme = () => {
   // Update data-theme attribute
   document.documentElement.setAttribute('data-theme', theme.id);
   
-  // Save theme settings to local storage
-  localStorage.setItem('theme-id', theme.id);
+  try {
+    await setPreference(UI_SETTINGS_KEYS.THEME_ID, theme.id);
+  } catch (error) {
+    console.error('保存主题设置失败:', error);
+  }
 
   // Trigger re-render
   nextTick(() => {
@@ -152,53 +161,50 @@ const getThemeDisplayName = computed(() => {
 });
 
 // Close dropdown menu when clicking outside
-const handleClickOutside = (event) => {
-  if (showThemeMenu.value && !event.target.closest('.relative')) {
+const handleClickOutside = (event: MouseEvent) => {
+  const target = event.target as HTMLElement;
+  if (showThemeMenu.value && target && !target.closest('.relative')) {
     showThemeMenu.value = false;
   }
 };
 
 // Initialize theme
-onMounted(() => {
+onMounted(async () => {
   // Ensure DOM is loaded before applying theme
-  requestAnimationFrame(() => {
-    // Get theme ID: prioritize theme-id, fallback to theme
-    let themeId = localStorage.getItem('theme-id');
-    
-    if (!themeId) {
-      const savedTheme = localStorage.getItem('theme');
-      if (savedTheme) {
-        const theme = availableThemes.value.find(t => t.cssClass === savedTheme);
-        if (theme) {
-          themeId = theme.id;
-          // Update to new format
-          localStorage.setItem('theme-id', themeId);
-          // Clear old format
-          localStorage.removeItem('theme');
-        }
+  requestAnimationFrame(async () => {
+    try {
+      const defaultTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      const themeId = await getPreference(UI_SETTINGS_KEYS.THEME_ID, defaultTheme);
+      
+      // Set current theme
+      if (availableThemes.value.find(t => t.id === themeId)) {
+        currentTheme.value = themeId;
+      } else {
+        currentTheme.value = defaultTheme;
       }
-    }
-
-    // Set current theme
-    if (themeId && availableThemes.value.find(t => t.id === themeId)) {
-      currentTheme.value = themeId;
-    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      currentTheme.value = 'dark';
-    } else {
+      
+      // Apply theme
+      await updateTheme();
+    } catch (error) {
+      console.error('初始化主题失败:', error);
+      // Fallback to default theme
       currentTheme.value = 'light';
+      await updateTheme();
     }
-    
-    // Apply theme
-    updateTheme();
   });
   
   // Listen for system theme changes
   const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-  const handleChange = (e) => {
+  const handleChange = async (e: MediaQueryListEvent) => {
     // Only respond to system theme changes when no user theme is set
-    if (!localStorage.getItem('theme-id')) {
-      currentTheme.value = e.matches ? 'dark' : 'light';
-      updateTheme();
+    try {
+      const userTheme = await getPreference(UI_SETTINGS_KEYS.THEME_ID, null);
+      if (!userTheme) {
+        currentTheme.value = e.matches ? 'dark' : 'light';
+        await updateTheme();
+      }
+    } catch (error) {
+      console.error('处理系统主题变化失败:', error);
     }
   };
   

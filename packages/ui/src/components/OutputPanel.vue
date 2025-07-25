@@ -1,6 +1,6 @@
 <!-- 输出面板组件 -->
 <template>
-  <div class="flex flex-col h-full">
+  <div class="flex flex-col h-full" :class="$attrs.class">
     <div class="flex items-center justify-between mb-3">
       <h3 v-if="resultTitle" class="text-lg font-semibold theme-text truncate">{{ resultTitle }}</h3>
       <div v-else-if="!hideTitle" class="text-lg font-semibold theme-text">{{ t('output.title') }}</div>
@@ -64,13 +64,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineEmits, defineProps, watch, nextTick, onMounted, computed } from 'vue'
+import { ref, watch, nextTick, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from '../composables/useToast'
 import { useAutoScroll } from '../composables/useAutoScroll'
 import { useClipboard } from '../composables/useClipboard'
 import MarkdownRenderer from './MarkdownRenderer.vue'
 import FullscreenDialog from './FullscreenDialog.vue'
+
+// 禁用属性自动继承，手动处理class属性
+defineOptions({
+  inheritAttrs: false
+})
 
 const { t } = useI18n()
 const toast = useToast()
@@ -87,14 +92,12 @@ const { elementRef: resultContainer, onContentChange, forceScrollToBottom, shoul
 
 // 计算完整内容
 const displayContent = computed(() => {
-  console.log('displayContent updated, current tokens count:', contentTokens.value.length);
   return contentTokens.value.join('');
 })
 
 // 监听组件挂载
 onMounted(async () => {
   await nextTick();
-  console.log('Component mounted, container exists:', !!resultContainer.value);
 });
 
 interface Props {
@@ -117,7 +120,6 @@ const emit = defineEmits<{
 watch(() => props.result, (newVal) => {
   if (!selfUpdate && !isStreaming.value && newVal) {
     contentTokens.value = [newVal]
-    console.log('contentTokens changed, current length:', newVal.length);
     // 通知内容变化，触发高度检查
     onContentChange()
   }
@@ -125,9 +127,7 @@ watch(() => props.result, (newVal) => {
 
 // 更新文本
 const updateContent = (text: string) => {
-  console.log('Preparing to update content:', text.substring(0, 20) + '...');
   contentTokens.value.push(text)
-  console.log('Content updated, current tokens count:', contentTokens.value.length);
   
   // 通知内容变化，触发高度检查
   onContentChange()
@@ -141,24 +141,15 @@ interface StreamHandlers {
 let selfUpdate = false;
 // 处理流式响应
 const handleStream = (): StreamHandlers => {
-  console.log('Starting stream handling, container exists:', !!resultContainer.value);
   isStreaming.value = true;
   contentTokens.value = [];
   
   return {
     onToken: (token: string) => {
-      console.log('Token received:', { 
-        tokenLength: token.length,
-        token: token.substring(0, 50) + '...',
-        containerExists: !!resultContainer.value,
-        currentTokensCount: contentTokens.value.length
-      });
-      
       // 直接更新内容
       updateContent(token);
     },
     onComplete: () => {
-      console.log('Stream completed, total tokens:', contentTokens.value.length);
       const finalContent = contentTokens.value.join(''); // 保存一份最终内容
       isStreaming.value = false;
       

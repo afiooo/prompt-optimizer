@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { IImportExportable } from '../../interfaces/import-export';
+import type { BuiltinTemplateLanguage } from './languageService';
 
 /**
  * 提示词元数据
@@ -8,7 +10,17 @@ export interface TemplateMetadata {
   lastModified: number;     // 最后修改时间
   author?: string;          // 作者（可选）
   description?: string;     // 描述（可选）
-  templateType: 'optimize' | 'iterate'; // 新增类型标识
+  templateType: 'optimize' | 'userOptimize' | 'iterate'; // 模板类型标识
+  language?: 'zh' | 'en';   // 模板语言（可选，主要用于内置模板语言切换）
+  [key: string]: any;       // 允许任意额外字段
+}
+
+/**
+ * 消息模板定义
+ */
+export interface MessageTemplate {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
 }
 
 /**
@@ -17,7 +29,7 @@ export interface TemplateMetadata {
 export interface Template {
   id: string;              // 提示词唯一标识
   name: string;            // 提示词名称
-  content: string;         // 提示词内容
+  content: string | MessageTemplate[];         // 提示词内容 - 支持字符串或消息数组
   metadata: TemplateMetadata;
   isBuiltin?: boolean;     // 是否为内置提示词
 }
@@ -27,48 +39,70 @@ export interface Template {
  */
 export type TemplateSourceType = 'builtin' | 'localStorage';
 
-/**
- * 提示词管理器配置
- */
-export interface TemplateManagerConfig {
-  storageKey?: string;     // localStorage存储键名
-  cacheTimeout?: number;   // 缓存超时时间
-}
+// TemplateManagerConfig 已删除 - 配置参数从未被使用
 
 /**
  * 提示词管理器接口
  */
-export interface ITemplateManager {
-  /** 获取指定ID的模板 */
-  getTemplate(templateId: string): Template;
-  
-  /** 保存模板 */
-  saveTemplate(template: Template): void;
-  
-  /** 删除模板 */
-  deleteTemplate(templateId: string): void;
-  
-  /** 列出所有模板 */
-  listTemplates(): Template[];
-  
-  /** 导出模板 */
-  exportTemplate(templateId: string): string;
-  
-  /** 导入模板 */
-  importTemplate(templateJson: string): void;
-  
-  /** 清除缓存 */
-  clearCache(templateId?: string): void;
-  
-  /** 按类型列出模板 */
-  listTemplatesByType(type: 'optimize' | 'iterate'): Template[];
-  
-  /** 
-   * 根据类型获取模板列表（已废弃）
-   * @deprecated 使用 listTemplatesByType 替代
+export interface ITemplateManager extends IImportExportable {
+  /**
+   * Get a template by ID
    */
-  getTemplatesByType(type: 'optimize' | 'iterate'): Template[];
+  getTemplate(id: string): Promise<Template>;
+
+  /**
+   * Save a template
+   */
+  saveTemplate(template: Template): Promise<void>;
+
+  /**
+   * Delete a template
+   */
+  deleteTemplate(id: string): Promise<void>;
+
+  /**
+   * List all templates
+   */
+  listTemplates(): Promise<Template[]>;
+
+  /**
+   * Export a template as JSON string
+   */
+  exportTemplate(id: string): Promise<string>;
+
+  /**
+   * Import a template from JSON string
+   */
+  importTemplate(jsonString: string): Promise<void>;
+
+  /**
+   * List templates by type
+   */
+  listTemplatesByType(type: 'optimize' | 'userOptimize' | 'iterate'): Promise<Template[]>;
+
+  /**
+   * Change built-in template language
+   */
+  changeBuiltinTemplateLanguage(language: BuiltinTemplateLanguage): Promise<void>;
+
+  /**
+   * Get current built-in template language
+   */
+  getCurrentBuiltinTemplateLanguage(): Promise<BuiltinTemplateLanguage>;
+
+  /**
+   * Get supported built-in template languages
+   */
+  getSupportedBuiltinTemplateLanguages(): Promise<BuiltinTemplateLanguage[]>;
 }
+
+/**
+ * 消息模板验证Schema
+ */
+export const messageTemplateSchema = z.object({
+  role: z.enum(['system', 'user', 'assistant']),
+  content: z.string().min(1)
+});
 
 /**
  * 提示词验证Schema
@@ -76,13 +110,17 @@ export interface ITemplateManager {
 export const templateSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
-  content: z.string().min(1),
+  content: z.union([
+    z.string().min(1),
+    z.array(messageTemplateSchema).min(1)
+  ]),
   metadata: z.object({
     version: z.string(),
     lastModified: z.number(),
     author: z.string().optional(),
     description: z.string().optional(),
-    templateType: z.enum(['optimize', 'iterate'])
-  }),
+    templateType: z.enum(['optimize', 'userOptimize', 'iterate']),
+    language: z.enum(['zh', 'en']).optional()
+  }).passthrough(), // 允许额外字段通过验证
   isBuiltin: z.boolean().optional()
-}); 
+});

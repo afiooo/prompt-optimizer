@@ -1,7 +1,9 @@
+import type { OptimizationMode } from '../prompt/types';
+
 /**
  * 提示词记录类型
  */
-export type PromptRecordType = 'optimize' | 'iterate';
+export type PromptRecordType = 'optimize' | 'userOptimize' | 'iterate' | 'test';
 
 /**
  * 提示词记录接口
@@ -36,7 +38,10 @@ export interface PromptRecord {
   /** 迭代时的修改说明 */
   iterationNote?: string;
   /** 元数据 */
-  metadata?: Record<string, any>;
+  metadata?: {
+    optimizationMode?: OptimizationMode;  // 优化模式
+    [key: string]: any;                   // 保持扩展性
+  };
 }
 
 /**
@@ -49,33 +54,40 @@ export interface PromptRecordChain {
   versions: PromptRecord[];
 }
 
+import { IImportExportable } from '../../interfaces/import-export';
+
 /**
  * 历史记录管理器接口
  */
-export interface IHistoryManager {
+export interface IHistoryManager extends IImportExportable {
   /** 添加记录 */
-  addRecord(record: PromptRecord): void;
+  addRecord(record: PromptRecord): Promise<void>;
   /** 获取所有记录 */
-  getRecords(): PromptRecord[];
+  getRecords(): Promise<PromptRecord[]>;
   /** 获取指定记录 */
-  getRecord(id: string): PromptRecord;
+  getRecord(id: string): Promise<PromptRecord>;
   /** 删除记录 */
-  deleteRecord(id: string): void;
+  deleteRecord(id: string): Promise<void>;
   /** 获取迭代链 */
-  getIterationChain(recordId: string): PromptRecord[];
+  getIterationChain(recordId: string): Promise<PromptRecord[]>;
   /** 清除所有记录 */
-  clearHistory(): void;
+  clearHistory(): Promise<void>;
   /** 获取所有记录链 */
-  getAllChains(): PromptRecordChain[];
-  /** 创建新的记录链 */
-  createNewChain(record: Omit<PromptRecord, 'chainId' | 'version' | 'previousId'>): PromptRecordChain;
-  /** 添加迭代记录 */
+  getAllChains(): Promise<PromptRecordChain[]>;
+  /** 获取指定链 */
+  getChain(chainId: string): Promise<PromptRecordChain>;
+  /** 创建一个新的记录链 */
+  createNewChain(params: Omit<PromptRecord, 'chainId' | 'version' | 'previousId'>): Promise<PromptRecordChain>;
+  /** 向现有链中添加一次迭代 */
   addIteration(params: {
     chainId: string;
     originalPrompt: string;
     optimizedPrompt: string;
-    iterationNote: string;
     modelKey: string;
     templateId: string;
-  }): PromptRecordChain;
+    iterationNote?: string;
+    metadata?: Record<string, any>;
+  }): Promise<PromptRecordChain>;
+  /** 删除指定ID的记录链 */
+  deleteChain(chainId: string): Promise<void>;
 } 

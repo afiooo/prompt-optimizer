@@ -1,11 +1,23 @@
 import { createI18n } from 'vue-i18n'
 import type { App } from 'vue'
+import { ref } from 'vue'
 import zhCN from '../i18n/locales/zh-CN'
 import enUS from '../i18n/locales/en-US'
+import { getPreference, setPreference } from '../composables/usePreferenceManager'
+import { UI_SETTINGS_KEYS } from '@prompt-optimizer/core'
+import type { AppServices } from '../types/services'
 
 // 定义支持的语言类型
 type SupportedLocale = 'zh-CN' | 'en-US'
 const SUPPORTED_LOCALES: SupportedLocale[] = ['zh-CN', 'en-US']
+
+// 服务引用
+let servicesRef = ref<AppServices | null>(null);
+
+// 设置服务引用的函数
+export function setI18nServices(services: AppServices) {
+  servicesRef.value = services;
+}
 
 // 创建i18n实例
 const i18n = createI18n({
@@ -22,26 +34,44 @@ const i18n = createI18n({
 })
 
 // 初始化语言设置
-function initializeLanguage() {
-  const savedLanguage = localStorage.getItem('preferred-language')
-  
-  // 优先使用保存的语言设置
-  if (savedLanguage && SUPPORTED_LOCALES.includes(savedLanguage as SupportedLocale)) {
-    i18n.global.locale.value = savedLanguage as SupportedLocale
-    return
+async function initializeLanguage() {
+  try {
+    if (!servicesRef.value) {
+      console.warn('初始化语言设置时服务不可用，使用默认语言');
+      return;
+    }
+
+    const defaultLocale: SupportedLocale = navigator.language.startsWith('zh') ? 'zh-CN' : 'en-US'
+    const savedLanguage = await getPreference(servicesRef, UI_SETTINGS_KEYS.PREFERRED_LANGUAGE, defaultLocale);
+
+    if (SUPPORTED_LOCALES.includes(savedLanguage as SupportedLocale)) {
+      i18n.global.locale.value = savedLanguage as SupportedLocale
+    } else {
+      i18n.global.locale.value = defaultLocale
+      await setPreference(servicesRef, UI_SETTINGS_KEYS.PREFERRED_LANGUAGE, defaultLocale)
+    }
+  } catch (error) {
+    console.error('初始化语言设置失败:', error)
+    // 降级到默认语言
+    i18n.global.locale.value = 'zh-CN'
   }
-  
-  // 其次使用浏览器语言设置
-  const defaultLocale: SupportedLocale = navigator.language.startsWith('zh') ? 'zh-CN' : 'en-US'
-  i18n.global.locale.value = defaultLocale
-  localStorage.setItem('preferred-language', defaultLocale)
 }
 
 // 导出插件安装函数
 export function installI18n(app: App) {
-  initializeLanguage()
+  initializeLanguage() // 异步初始化，不阻塞应用启动
+  app.use(i18n)
+}
+
+// 导出延迟初始化函数 - 用于Extension等需要等待服务初始化的场景
+export async function initializeI18nWithStorage() {
+  await initializeLanguage()
+}
+
+// 导出基础安装函数 - 只安装插件，不初始化语言
+export function installI18nOnly(app: App) {
   app.use(i18n)
 }
 
 // 导出i18n实例
-export { i18n } 
+export { i18n }

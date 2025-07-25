@@ -19,6 +19,7 @@ export default {
     enabled: 'Enabled',
     disabled: 'Disabled',
     add: 'Add',
+    remove: 'Remove',
     title: 'Title',
     description: 'Description',
     lastModified: 'Last Modified',
@@ -34,10 +35,46 @@ export default {
     version: 'V{version}',
     optimize: 'Optimize',
     iterate: 'Iterate',
-    copySuccess: 'Copy Success',
+    system: 'System',
+    user: 'User',
+    copySuccess: 'Copied to clipboard',
     copyFailed: 'Copy Failed',
     appName: 'Prompt Optimizer',
     selectFile: 'Select File',
+    exporting: 'Exporting...',
+    importing: 'Importing...',
+    number: 'Number',
+    integer: 'Integer',
+    optional: 'Optional',
+    copy: 'Copy',
+    content: 'Content',
+    noContent: 'No content',
+    clickToEdit: 'Click to edit',
+    generating: 'Generating...',
+    generatingReasoning: 'Thinking...',
+    copyContent: 'Copy Content',
+    copyAll: 'Copy All',
+    expandReasoning: 'Expand reasoning',
+    collapseReasoning: 'Collapse reasoning',
+    success: 'Success',
+    error: 'Error',
+    warning: 'Warning',
+    info: 'Info',
+    deleteConfirmation: 'Are you sure you want to delete this?',
+    editingDisabledDuringStream: 'Editing is disabled while content is being generated',
+    markdown: 'Render',
+    text: 'Text',
+    switchToTextView: 'Switch to Plain Text View',
+    switchToMarkdownView: 'Switch to Markdown Render View',
+    copied: 'Copied',
+    render: 'Render',
+    source: 'Source',
+    reasoning: 'Reasoning',
+    compare: 'Compare'
+  },
+  actions: {
+    copy: 'Copy',
+    fullscreen: 'Fullscreen'
   },
   nav: {
     home: 'Home',
@@ -46,6 +83,7 @@ export default {
     modelManager: 'Model Manager',
     history: 'History',
     templates: 'Templates',
+    dataManager: 'Data Manager',
   },
   promptOptimizer: {
     title: 'Prompt Optimizer',
@@ -58,6 +96,18 @@ export default {
     originalPrompt: 'Original Prompt',
     optimizeModel: 'Optimization Model',
     templateLabel: 'Optimization Template',
+    originalPromptPlaceholder: 'Enter your original prompt to optimize...',
+
+    // New: Optimization Mode Related
+    optimizationMode: 'Optimization Mode',
+    systemPrompt: 'System Prompt Optimization',
+    userPrompt: 'User Prompt Optimization',
+    systemPromptInput: 'System Prompt',
+    userPromptInput: 'User Prompt',
+    systemPromptPlaceholder: 'Enter the system prompt to optimize...',
+    userPromptPlaceholder: 'Enter the user prompt to optimize...',
+    systemPromptHelp: 'System Prompt Optimization Mode: Optimize system prompts that define AI assistant role, behavior and response style',
+    userPromptHelp: 'User Prompt Optimization Mode: Optimize user prompts to improve AI interaction effectiveness and accuracy'
   },
   settings: {
     title: 'Settings',
@@ -82,12 +132,38 @@ export default {
     useVercelProxyHint: 'Using Vercel proxy can solve CORS issues, but may trigger risk control from some providers. Please use with caution',
     addModel: 'Add',
 
+    // Advanced Parameters
+    advancedParameters: {
+      title: 'Advanced Parameters',
+      noParamsConfigured: 'No advanced parameters configured',
+      customParam: 'Custom',
+      add: 'Add Parameter',
+      select: 'Select a parameter',
+      selectTitle: 'Add Advanced Parameter',
+      custom: 'Custom Parameter',
+      customKeyPlaceholder: 'Enter parameter name',
+      customValuePlaceholder: 'Enter parameter value',
+      stopSequencesPlaceholder: 'Enter stop sequences (comma-separated)',
+      unitLabel: 'Unit',
+      currentProvider: 'Current Provider',
+      customProvider: 'Custom',
+      availableParams: 'available parameters',
+      noAvailableParams: 'no available parameters',
+      validation: {
+        dangerousParam: 'This parameter is considered dangerous and is not allowed',
+        invalidNumber: 'Must be a valid number',
+        belowMin: 'Value cannot be less than {min}',
+        aboveMax: 'Value cannot be greater than {max}',
+        mustBeInteger: 'Must be an integer'
+      }
+    },
+
     // Placeholders
     modelKeyPlaceholder: 'Enter model key',
     displayNamePlaceholder: 'Enter display name',
-    apiUrlPlaceholder: 'Enter API URL',
+    apiUrlPlaceholder: 'https://api.example.com/v1',
     defaultModelPlaceholder: 'Type or select a model name',
-    apiKeyPlaceholder: 'Enter API key',
+    apiKeyPlaceholder: 'Enter API key (optional)',
 
     // Confirmation
     deleteConfirm: 'Are you sure you want to delete this model? This action cannot be undone.',
@@ -111,6 +187,7 @@ export default {
     selectModel: 'Select a model',
     fetchModelsFailed: 'Failed to fetch models: {error}',
     needApiKeyAndBaseUrl: 'Please fill API key and base URL first',
+    needBaseUrl: 'Please fill in API URL first',
 
     // Status Text
     disabled: 'Disabled',
@@ -133,10 +210,12 @@ export default {
   },
   templateManager: {
     title: 'Template Manager',
-    optimizeTemplates: 'Optimization Templates',
-    iterateTemplates: 'Iteration Templates',
-    optimizeTemplateList: 'Optimization Template List',
-    iterateTemplateList: 'Iteration Template List',
+    optimizeTemplates: 'System Prompt Optimization Templates',
+    iterateTemplates: 'Iteration Optimization Templates',
+    optimizeTemplateList: 'System Prompt Optimization Template List',
+    iterateTemplateList: 'Iteration Optimization Template List',
+    userOptimizeTemplates: 'User Prompt Optimization Templates',
+    userOptimizeTemplateList: 'User Prompt Optimization Template List',
     addTemplate: 'Add',
     editTemplate: 'Edit',
     deleteTemplate: 'Delete',
@@ -148,6 +227,43 @@ export default {
     copyTemplate: 'Copy',
     useTemplate: 'Use',
     viewTemplate: 'View',
+    migrate: 'Upgrade',
+    help: 'Help',
+
+    // Template Format
+    templateFormat: 'Template Format',
+    simpleTemplate: 'Simple Template',
+    advancedTemplate: 'Advanced Template',
+    simpleTemplateHint: 'No template technology used, template content directly serves as system prompt, user input as user message',
+    advancedTemplateHint: 'Supports multi-message structure and advanced template syntax, available variables: originalPrompt, lastOptimizedPrompt, iterateInput',
+
+    // Message Templates
+    messageTemplates: 'Message Templates',
+    addMessage: 'Add Message',
+    removeMessage: 'Remove Message',
+    moveUp: 'Move Up',
+    moveDown: 'Move Down',
+    messageContentPlaceholder: 'Enter message content, supports variables like originalPrompt',
+
+    // Roles
+    roleSystem: 'System',
+    roleUser: 'User',
+    roleAssistant: 'Assistant',
+
+    // Preview
+    preview: 'Preview',
+
+    // Migration
+    convertToAdvanced: 'Convert to Advanced Format',
+    migrationDescription: 'Convert simple template to advanced message format for more flexible control.',
+    originalTemplate: 'Original Template',
+    convertedTemplate: 'Converted Template',
+    applyMigration: 'Apply Conversion',
+    migrationSuccess: 'Template converted successfully',
+    migrationFailed: 'Template conversion failed',
+
+    // Syntax Guide
+    syntaxGuide: 'Syntax Guide',
 
     // Form Fields
     name: 'Template Name',
@@ -160,6 +276,11 @@ export default {
     contentPlaceholder: 'Enter template content',
     descriptionPlaceholder: 'Enter template description (optional)',
     searchPlaceholder: 'Search templates...',
+
+    // Validation Errors
+    noMessagesError: 'Advanced template requires at least one message',
+    emptyMessageError: 'Message content cannot be empty',
+    emptyContentError: 'Template content cannot be empty',
 
     // Confirmation
     deleteConfirm: 'Are you sure you want to delete this template? This action cannot be undone.',
@@ -229,9 +350,11 @@ export default {
     originalResult: 'Original Prompt Result',
     optimizedResult: 'Optimized Prompt Result',
     testResult: 'Test Result',
+    userPromptTest: 'User Prompt Test',
     error: {
       failed: 'Test Failed',
-      noModel: 'Please select a test model first'
+      noModel: 'Please select a test model first',
+      noTestContent: 'Please enter test content'
     },
     enableMarkdown: 'Enable Markdown rendering',
     disableMarkdown: 'Disable Markdown rendering',
@@ -242,6 +365,11 @@ export default {
     configure: 'Configure Template',
     selected: 'Selected',
     select: 'Select',
+    builtinLanguage: 'Built-in Template Language',
+    switchBuiltinLanguage: 'Switch built-in template language',
+    languageChanged: 'Built-in template language switched to {language}',
+    languageChangeError: 'Failed to switch built-in template language',
+    languageInitError: 'Failed to initialize built-in template language',
     type: {
       optimize: 'Optimize',
       iterate: 'Iterate'
@@ -291,6 +419,12 @@ export default {
     confirmOptimize: 'Confirm Optimize',
     iterateTitle: 'Iteration Template',
     selectIterateTemplate: 'Please select iteration template:',
+    diff: {
+      compare: 'Compare with Previous',
+      exit: 'Exit Compare',
+      enable: 'Enable text comparison',
+      disable: 'Disable text comparison'
+    },
     error: {
       noTemplate: 'Please select an iteration template first'
     }
@@ -325,7 +459,10 @@ export default {
     error: {
       serviceInit: 'Service not initialized, please try again later',
       optimizeFailed: 'Optimization failed',
-      iterateFailed: 'Iteration optimization failed',
+      iterateFailed: 'Iteration failed',
+      compareFailed: 'Comparison analysis failed',
+      noVersionsToCompare: 'Not enough versions to compare',
+      noPreviousVersion: 'No previous version available for comparison',
       testFailed: 'Test failed',
       testError: 'Error occurred during test',
       loadTemplatesFailed: 'Failed to load templates',
@@ -338,20 +475,26 @@ export default {
       historyChainDeleteFailed: 'Failed to delete history record',
       selectTemplateFailed: 'Failed to select template: {error}',
       noOptimizeTemplate: 'Please select an optimization template first',
+      noOptimizeModel: 'Please select an optimization model first',
       noIterateTemplate: 'Please select an iteration template first',
       incompleteTestInfo: 'Please fill in complete test information',
       noDefaultTemplate: 'Failed to load default template',
       optimizeProcessFailed: 'Error in optimization process',
       testProcessError: 'Error occurred during test process',
-      initTemplateFailed: 'Failed to initialize template selection'
+      initTemplateFailed: 'Failed to initialize template selection',
+      appInitFailed: 'Application initialization failed, please refresh or contact support'
     },
     success: {
       optimizeSuccess: 'Optimization successful',
+      iterateComplete: 'Iteration optimization completed',
       iterateSuccess: 'Iteration optimization successful',
       modelSelected: 'Model selected: {name}',
       templateSelected: '{type} template selected: {name}',
       historyClear: 'History cleared',
-      historyChainDeleted: 'History record deleted'
+      historyChainDeleted: 'History record deleted',
+      historyLoaded: 'History loaded successfully',
+      exitCompare: 'Exited compare mode',
+      compareEnabled: 'Compare mode enabled'
     },
     warn: {
       loadOptimizeTemplateFailed: 'Failed to load saved optimization template',
@@ -359,11 +502,13 @@ export default {
     },
     info: {
       modelUpdated: 'Model updated',
-      templateSelected: 'Template selected'
+      templateSelected: 'Template selected',
+      optimizationModeAutoSwitched: 'Automatically switched to {mode} prompt optimization mode'
     }
   },
   log: {
     info: {
+      initializing: 'Initializing...',
       initBaseServicesStart: 'Starting to initialize base services...',
       templateList: 'Template list',
       createPromptService: 'Creating prompt service...',
@@ -373,5 +518,132 @@ export default {
     error: {
       initBaseServicesFailed: 'Failed to initialize base services'
     }
+  },
+  dataManager: {
+    title: 'Data Manager',
+    export: {
+      title: 'Export Data',
+      description: 'Export all history records, model configurations, custom templates and user settings (including theme, language, model selections, etc.)',
+      button: 'Export Data',
+      success: 'Data exported successfully',
+      failed: 'Failed to export data'
+    },
+    import: {
+      title: 'Import Data',
+      description: 'Import previously exported data file (will overwrite existing data and user settings)',
+      selectFile: 'Click to select file or drag file here',
+      changeFile: 'Change File',
+      button: 'Import Data',
+      success: 'Data imported successfully',
+      failed: 'Failed to import data',
+      successWithRefresh: 'Data imported successfully, page will refresh to apply all changes'
+    },
+    warning: 'Importing data will overwrite existing history records, model configurations, custom templates and all user settings (including theme, language preferences, etc.). Please ensure you have backed up important data.'
+  },
+  params: {
+    "temperature": {
+      "label": "Temperature",
+      "description": "Controls randomness: Lower values (e.g., 0.2) make the output more focused and deterministic, while higher values (e.g., 0.8) make it more random."
+    },
+    "top_p": {
+      "label": "Top P",
+      "description": "Nucleus sampling. Considers tokens with top P probability mass. E.g., 0.1 means only tokens comprising the top 10% probability mass are considered."
+    },
+    "max_tokens": {
+      "label": "Max Tokens",
+      "description": "Maximum number of tokens to generate in the completion."
+    },
+    "presence_penalty": {
+      "label": "Presence Penalty",
+      "description": "Number between -2.0 and 2.0. Positive values penalize new tokens based on whether they appear in the text so far, increasing the model's likelihood to talk about new topics."
+    },
+    "frequency_penalty": {
+      "label": "Frequency Penalty",
+      "description": "Number between -2.0 and 2.0. Positive values penalize new tokens based on their existing frequency in the text so far, decreasing the model's likelihood to repeat the same line verbatim."
+    },
+    "timeout": {
+      "label": "Timeout (ms)",
+      "description_openai": "Request timeout in milliseconds for the OpenAI client connection."
+    },
+    "maxOutputTokens": {
+      "label": "Max Output Tokens",
+      "description": "Maximum number of tokens the model can output in a single response."
+    },
+    "top_k": {
+      "label": "Top K",
+      "description": "Filters the next token choices to the K most likely tokens. Helps to reduce nonsensical token generation."
+    },
+    "candidateCount": {
+      "label": "Candidate Count",
+      "description": "Number of generated responses to return. Must be between 1 and 8."
+    },
+    "stopSequences": {
+      "label": "Stop Sequences",
+      "description": "Custom strings that will stop output generation if encountered. Specify multiple sequences separated by commas."
+    },
+    "tokens": {
+      "unit": "tokens"
+    }
+  },
+  updater: {
+    title: 'App Updates',
+    checkForUpdates: 'Check for updates',
+    currentVersion: 'Current Version',
+    versionLoadFailed: 'Failed to load version',
+    downloadFailed: 'Download Failed',
+    dismiss: 'Dismiss',
+    noStableVersionAvailable: 'No stable version available',
+    noPrereleaseVersionAvailable: 'No prerelease version available',
+    failedToGetStableInfo: 'Failed to get stable version update info',
+    failedToGetPrereleaseInfo: 'Failed to get prerelease version update info',
+    alreadyLatestStable: 'Already using the latest stable version ({version})',
+    alreadyLatestPrerelease: 'Already using the latest prerelease version ({version})',
+    stableDownloadFailed: 'Stable version download failed: {error}',
+    prereleaseDownloadFailed: 'Prerelease version download failed: {error}',
+    unknownError: 'Unknown error',
+    stable: 'Stable',
+    prerelease: 'Prerelease',
+    downloadFailedGeneric: '{type} download failed: {error}',
+    warning: 'Warning',
+    info: 'Information',
+    versionIgnored: 'Version {version} is ignored',
+    checkFailed: 'Check Failed',
+    ignored: 'Ignored',
+    unignore: 'Unignore',
+    latestVersion: 'Latest Version',
+    noPrereleaseAvailable: 'No prerelease available',
+    latestIsStable: 'Latest version is stable',
+    latestStableVersion: 'Latest Stable Version',
+    latestPrereleaseVersion: 'Latest Prerelease Version',
+    viewStable: 'View Stable',
+    viewPrerelease: 'View Prerelease',
+    allowPrerelease: 'Receive prerelease updates',
+    noUpdatesAvailable: 'You are using the latest version',
+    checkNow: 'Check for Updates',
+    checking: 'Checking for updates...',
+    checkingForUpdates: 'Checking for updates...',
+    newVersionAvailable: 'New version available',
+    viewDetails: 'View Details',
+    downloadUpdate: 'Download Update',
+    download: 'Download',
+    updateAvailable: 'Update Available',
+    hasUpdate: 'Update Available',
+    details: 'Details',
+    ignore: 'Ignore',
+    ignoreVersion: 'Ignore This Version',
+    downloading: 'Downloading update...',
+    downloadingShort: 'Downloading...',
+    downloadComplete: 'Download Complete',
+    clickInstallToRestart: 'Click the button below to install and restart the application',
+    installAndRestart: 'Install and Restart',
+    updateError: 'Update failed',
+    downloadError: 'Download failed',
+    installError: 'Installation failed',
+    upToDate: 'Up to Date',
+    devEnvironment: 'Development Environment: Update checking is disabled',
+    clickToCheck: 'Click to check for updates',
+    viewOnGitHub: 'View on GitHub',
+    noReleasesFound: 'No releases found. This project may not have published any versions yet.',
+    noStableReleasesFound: 'No stable releases found. Only prerelease versions may be available.'
   }
-}; 
+};

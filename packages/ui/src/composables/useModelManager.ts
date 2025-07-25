@@ -1,13 +1,16 @@
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, computed, reactive } from 'vue'
 import type { Ref } from 'vue'
-import type { ModelConfig, ModelManager } from '@prompt-optimizer/core'
+import type { ModelConfig, IModelManager } from '@prompt-optimizer/core'
 import { useToast } from './useToast'
 import { useI18n } from 'vue-i18n'
+import { usePreferences } from './usePreferenceManager'
+import { MODEL_SELECTION_KEYS } from '@prompt-optimizer/core'
+import type { AppServices } from '../types/services'
 
 export interface ModelManagerHooks {
-  showConfig: Ref<boolean>
-  selectedOptimizeModel: Ref<string>
-  selectedTestModel: Ref<string>
+  showConfig: boolean
+  selectedOptimizeModel: string
+  selectedTestModel: string
   handleModelManagerClose: () => void
   handleModelsUpdated: (modelKey: string) => void
   handleModelSelect: (model: ModelConfig & { key: string }) => void
@@ -16,139 +19,138 @@ export interface ModelManagerHooks {
 }
 
 export interface ModelManagerOptions {
-  modelManager: ModelManager
   optimizeModelSelect: Ref<any>
   testModelSelect: Ref<any>
 }
 
-// Local storage keys
-const STORAGE_KEYS = {
-  OPTIMIZE_MODEL: 'app:selected-optimize-model',
-  TEST_MODEL: 'app:selected-test-model'
-} as const
-
-export function useModelManager(options: ModelManagerOptions): ModelManagerHooks {
+/**
+ * 模型管理器Hook
+ * @param services 服务实例引用
+ * @param options 选项配置
+ * @returns ModelManagerHooks
+ */
+export function useModelManager(
+  services: Ref<AppServices | null>,
+  options: ModelManagerOptions
+): ModelManagerHooks {
   const toast = useToast()
   const { t } = useI18n()
-  const showConfig = ref(false)
-  const selectedOptimizeModel = ref('')
-  const selectedTestModel = ref('')
+  const { getPreference, setPreference } = usePreferences(services)
   
-  const { modelManager, optimizeModelSelect, testModelSelect } = options
+  const { optimizeModelSelect, testModelSelect } = options
+  
+  // 模型管理器引用
+  const modelManager = computed(() => services.value?.modelManager)
+
+  // 创建一个 reactive 状态对象
+  const state = reactive<ModelManagerHooks>({
+    showConfig: false,
+    selectedOptimizeModel: '',
+    selectedTestModel: '',
+    handleModelManagerClose: async () => {
+      // Update data first
+      await state.loadModels()
+      // Refresh model selection components
+      optimizeModelSelect.value?.refresh()
+      testModelSelect.value?.refresh()
+      // Close interface
+      state.showConfig = false
+    },
+    handleModelsUpdated: (modelKey: string) => {
+      // Handle other logic after model update if needed
+      console.log(t('toast.info.modelUpdated'), modelKey)
+    },
+    handleModelSelect: async (model: ModelConfig & { key: string }) => {
+      if (model) {
+        state.selectedOptimizeModel = model.key
+        state.selectedTestModel = model.key
+        
+        await saveModelSelection(model.key, 'optimize')
+        await saveModelSelection(model.key, 'test')
+        
+        toast.success(t('toast.success.modelSelected', { name: model.name }))
+      }
+    },
+    initModelSelection: async () => {
+      try {
+        const allModels = await modelManager.value!.getAllModels()
+        const enabledModels = allModels.filter(m => m.enabled)
+        const defaultModel = enabledModels[0]?.key
+  
+        if (enabledModels.length > 0) {
+          const savedOptimizeModel = await getPreference(MODEL_SELECTION_KEYS.OPTIMIZE_MODEL, defaultModel)
+          state.selectedOptimizeModel = enabledModels.some(m => m.key === savedOptimizeModel)
+            ? savedOptimizeModel
+            : defaultModel
+
+          const savedTestModel = await getPreference(MODEL_SELECTION_KEYS.TEST_MODEL, defaultModel)
+          state.selectedTestModel = enabledModels.some(m => m.key === savedTestModel)
+            ? savedTestModel
+            : defaultModel
+  
+          await saveModelSelection(state.selectedOptimizeModel, 'optimize')
+          await saveModelSelection(state.selectedTestModel, 'test')
+        }
+      } catch (error) {
+        console.error(t('toast.error.initModelSelectFailed'), error)
+        toast.error(t('toast.error.initModelSelectFailed'))
+      }
+    },
+    loadModels: async () => {
+      try {
+        // Get latest enabled models list
+        const allModels = await modelManager.value!.getAllModels()
+        const enabledModels = allModels.filter((m: any) => m.enabled)
+        const defaultModel = enabledModels[0]?.key
+  
+        // Verify if current selected models are still available
+        if (!enabledModels.find((m: any) => m.key === state.selectedOptimizeModel)) {
+          state.selectedOptimizeModel = defaultModel || ''
+        }
+        if (!enabledModels.find((m: any) => m.key === state.selectedTestModel)) {
+          state.selectedTestModel = defaultModel || ''
+        }
+      } catch (error: any) {
+        console.error(t('toast.error.loadModelsFailed'), error)
+        toast.error(t('toast.error.loadModelsFailed'))
+      }
+    }
+  })
 
   // Save model selection
-  const saveModelSelection = (model: string, type: 'optimize' | 'test') => {
+  const saveModelSelection = async (model: string, type: 'optimize' | 'test') => {
     if (model) {
-      localStorage.setItem(
-        type === 'optimize' ? STORAGE_KEYS.OPTIMIZE_MODEL : STORAGE_KEYS.TEST_MODEL,
-        model
-      )
-    }
-  }
-
-  // Initialize model selection
-  const initModelSelection = () => {
-    try {
-      const enabledModels = modelManager.getAllModels().filter(m => m.enabled)
-      const defaultModel = enabledModels[0]?.key
-
-      if (defaultModel) {
-        // Load optimization model selection
-        const savedOptimizeModel = localStorage.getItem(STORAGE_KEYS.OPTIMIZE_MODEL)
-        selectedOptimizeModel.value = (savedOptimizeModel && enabledModels.find(m => m.key === savedOptimizeModel))
-          ? savedOptimizeModel
-          : defaultModel
-
-        // Load test model selection
-        const savedTestModel = localStorage.getItem(STORAGE_KEYS.TEST_MODEL)
-        selectedTestModel.value = (savedTestModel && enabledModels.find(m => m.key === savedTestModel))
-          ? savedTestModel
-          : defaultModel
-
-        // Save initial selection
-        saveModelSelection(selectedOptimizeModel.value, 'optimize')
-        saveModelSelection(selectedTestModel.value, 'test')
+      try {
+        await setPreference(
+          type === 'optimize' ? MODEL_SELECTION_KEYS.OPTIMIZE_MODEL : MODEL_SELECTION_KEYS.TEST_MODEL,
+          model
+        )
+      } catch (error) {
+        console.error(`保存模型选择失败 (${type}):`, error)
+        throw error;
       }
-    } catch (error) {
-      console.error(t('toast.error.initModelSelectFailed'), error)
-      toast.error(t('toast.error.initModelSelectFailed'))
     }
-  }
-
-  // Handle model selection
-  const handleModelSelect = (model: ModelConfig & { key: string }) => {
-    if (model) {
-      selectedOptimizeModel.value = model.key
-      selectedTestModel.value = model.key
-      
-      saveModelSelection(model.key, 'optimize')
-      saveModelSelection(model.key, 'test')
-      
-      toast.success(t('toast.success.modelSelected', { name: model.name }))
-    }
-  }
-
-  // Load model data
-  const loadModels = () => {
-    try {
-      // Get latest enabled models list
-      const enabledModels = modelManager.getAllModels().filter(m => m.enabled)
-      const defaultModel = enabledModels[0]?.key
-
-      // Verify if current selected models are still available
-      if (!enabledModels.find(m => m.key === selectedOptimizeModel.value)) {
-        selectedOptimizeModel.value = defaultModel || ''
-      }
-      if (!enabledModels.find(m => m.key === selectedTestModel.value)) {
-        selectedTestModel.value = defaultModel || ''
-      }
-    } catch (error: any) {
-      console.error(t('toast.error.loadModelsFailed'), error)
-      toast.error(t('toast.error.loadModelsFailed'))
-    }
-  }
-
-  const handleModelManagerClose = () => {
-    // Update data first
-    loadModels()
-    // Refresh model selection components
-    optimizeModelSelect.value?.refresh()
-    testModelSelect.value?.refresh()
-    // Close interface
-    showConfig.value = false
-  }
-
-  const handleModelsUpdated = (modelKey: string) => {
-    // Handle other logic after model update if needed
-    console.log(t('toast.info.modelUpdated'), modelKey)
   }
 
   // Watch model selection changes
-  watch(selectedOptimizeModel, (newVal) => {
+  watch(() => state.selectedOptimizeModel, async (newVal) => {
     if (newVal) {
-      saveModelSelection(newVal, 'optimize')
+      await saveModelSelection(newVal, 'optimize')
     }
   })
 
-  watch(selectedTestModel, (newVal) => {
+  watch(() => state.selectedTestModel, async (newVal) => {
     if (newVal) {
-      saveModelSelection(newVal, 'test')
+      await saveModelSelection(newVal, 'test')
     }
   })
 
-  // Auto initialize on mounted
-  onMounted(() => {
-    initModelSelection()
-  })
+  // 监听服务实例变化，初始化模型选择
+  watch(services, async () => {
+    if (services.value?.modelManager) {
+      await state.initModelSelection()
+    }
+  }, { immediate: true })
 
-  return {
-    showConfig,
-    selectedOptimizeModel,
-    selectedTestModel,
-    handleModelManagerClose,
-    handleModelsUpdated,
-    handleModelSelect,
-    initModelSelection,
-    loadModels
-  }
+  return state
 } 

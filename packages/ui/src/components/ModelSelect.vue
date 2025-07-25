@@ -60,11 +60,11 @@
   </div>
 </template>
 
-<script setup>
-import { ref, computed, watch } from 'vue'
+<script setup lang="ts">
+import { ref, computed, watch, onMounted, inject, type Ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { modelManager } from '@prompt-optimizer/core'
 import { clickOutside } from '../directives/clickOutside'
+import type { AppServices } from '../types/services'
 
 const { t } = useI18n()
 
@@ -77,6 +77,7 @@ const props = defineProps({
     type: Boolean,
     default: false
   }
+  // modelManager现在通过inject获取，不再需要props
 })
 
 const emit = defineEmits(['update:modelValue', 'config'])
@@ -85,29 +86,65 @@ const isOpen = ref(false)
 const refreshTrigger = ref(0)
 const vClickOutside = clickOutside
 
-// 获取选中的模型
-const getSelectedModel = computed(() => {
-  refreshTrigger.value
-  return modelManager.getAllModels().find(m => m.key === props.modelValue)
+// 统一使用inject获取services
+const services = inject<Ref<AppServices | null>>('services')
+if (!services) {
+  throw new Error('[ModelSelect] services未正确注入，请确保在App组件中正确provide了services')
+}
+
+const getModelManager = computed(() => {
+  const servicesValue = services.value
+  if (!servicesValue) {
+    throw new Error('[ModelSelect] services未初始化，请确保应用已正确启动')
+  }
+
+  const manager = servicesValue.modelManager
+  if (!manager) {
+    throw new Error('[ModelSelect] modelManager未初始化，请确保服务已正确配置')
+  }
+
+  return manager
 })
 
-// 启用的模型列表
-const enabledModels = computed(() => {
-  refreshTrigger.value
-  return modelManager.getEnabledModels()
+// 响应式数据存储
+const allModels = ref([])
+const enabledModels = ref([])
+
+// 加载模型数据
+const loadModels = async () => {
+  try {
+    const manager = getModelManager.value
+    if (!manager) {
+      throw new Error('ModelManager not available')
+    }
+    
+    allModels.value = await manager.getAllModels()
+    enabledModels.value = await manager.getEnabledModels()
+  } catch (error) {
+    console.error('Failed to load models:', error)
+    allModels.value = []
+    enabledModels.value = []
+  }
+}
+
+// 获取选中的模型
+const getSelectedModel = computed(() => {
+  refreshTrigger.value // 触发响应式更新
+  return allModels.value.find(m => m.key === props.modelValue)
 })
 
 // 判断是否为默认模型
 const isDefaultModel = (key) => {
-  const model = modelManager.getAllModels().find(m => m.key === key)
+  const model = allModels.value.find(m => m.key === key)
   return model?.isDefault ?? false
 }
 
 // 切换下拉框
-const toggleDropdown = () => {
+const toggleDropdown = async () => {
   if (props.disabled) return
   isOpen.value = !isOpen.value
   if (isOpen.value) {
+    await loadModels()
     refreshTrigger.value++
   }
 }
@@ -120,7 +157,8 @@ const selectModel = (model) => {
 }
 
 // 添加刷新方法
-const refresh = () => {
+const refresh = async () => {
+  await loadModels()
   refreshTrigger.value++
 }
 
@@ -131,14 +169,21 @@ defineExpose({
 
 // 监听模型数据变化，确保选中的模型仍然可用
 watch(
-  () => modelManager.getAllModels(),
-  () => {
-    if (props.modelValue && !enabledModels.value.find(m => m.key === props.modelValue)) {
-      emit('update:modelValue', enabledModels.value[0]?.key || '')
+  () => props.modelValue,
+  async (newValue) => {
+    if (newValue && !enabledModels.value.find(m => m.key === newValue)) {
+      await loadModels()
+      if (!enabledModels.value.find(m => m.key === newValue)) {
+        emit('update:modelValue', enabledModels.value[0]?.key || '')
+      }
     }
-  }, 
-  { deep: true }
+  }
 )
+
+// 初始化时加载模型
+onMounted(async () => {
+  await loadModels()
+})
 
 // 计算下拉框样式
 const dropdownStyle = computed(() => ({
